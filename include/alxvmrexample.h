@@ -3,6 +3,10 @@
 #include <glib-object.h>
 #include <dbus/dbus-glib.h>
 #include <gio/gio.h>
+
+#define dbg(fmtstr, args...) \
+  (g_print(PROGNAME ":%s: " fmtstr "\n", __func__, ##args))
+  
 G_BEGIN_DECLS
 
 #define ALXVMR_TYPE_EXAMPLE (alxvmr_example_get_type())
