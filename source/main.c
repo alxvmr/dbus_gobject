@@ -12,14 +12,14 @@ static void method_call_cb (GDBusConnection       *connection,
                             GDBusMethodInvocation *invocation,
                             gpointer               user_data)
 {
-    AlxvmrExample *example = ALXVMR_EXAMPLE(user_data);
+    AlxvmrExample *self = (AlxvmrExample *) user_data;
     GError *error = NULL;
 
     if (g_strcmp0(method_name, "setvalue1") == 0) {
         gint new_value;
         g_variant_get(parameters, "(i)", &new_value);
         
-        if (alxvmr_example_setvalue1 (example, new_value, &error)) {
+        if (alxvmr_example_setvalue1 (self, new_value, &error)) {
             g_dbus_method_invocation_return_value(invocation, NULL);
         }
         else {
@@ -30,11 +30,9 @@ static void method_call_cb (GDBusConnection       *connection,
     }
 
     if (g_strcmp0(method_name, "getvalue1") == 0) {
-        gint new_value;
-        g_variant_get(parameters, "(i)", &new_value);
-
-        if (alxvmr_example_getvalue1 (example, new_value, &error)) {
-            g_dbus_method_invocation_return_value(invocation, NULL);
+        gint out_value;
+        if (alxvmr_example_getvalue1 (self, &out_value, &error)) {
+            g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", out_value));
         }
         else {
             g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED, "Failed to get value1: %s", error->message);
@@ -99,7 +97,7 @@ int main (int argc, char *argv[])
                               NULL,
                               obj,
                               NULL);
-                              
+
     GMainLoop *loop = g_main_loop_new(NULL, FALSE);
     loop = g_main_loop_new (NULL, FALSE);
     g_main_loop_run (loop);

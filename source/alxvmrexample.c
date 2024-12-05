@@ -1,8 +1,5 @@
 #include "alxvmrexample.h"
 
-#define dbg(fmtstr, args...) \
-  (g_print(PROGNAME ":%s: " fmtstr "\n", __func__, ##args))
-
 struct _AlxvmrExample {
     GObjectClass parent;
     GDBusNodeInfo *introspection_data;
