@@ -40,12 +40,13 @@ non_interactive_conv (int                        num_msg,
                 break;
             case PAM_PROMPT_ECHO_ON:
             case PAM_PROMPT_ECHO_OFF:
-                if (message->msg_style == PAM_PROMPT_ECHO_ON) {
-                    answ = passwdservice->user_name;
-                }
-                else {
-                    answ = passwdservice->old_passwd;
-                }
+                answ = passwd_service_fileds[i];
+                // if (message->msg_style == PAM_PROMPT_ECHO_ON) {
+                //     answ = passwdservice->user_name;
+                // }
+                // else {
+                //     answ = passwdservice->old_passwd;
+                // }
                 if ((answ != NULL) && (answ[0] != '\0')) {
                     size_answ = strlen (answ);
                     resp[i].resp = malloc(size_answ + 1);
@@ -68,10 +69,10 @@ non_interactive_conv (int                        num_msg,
         }
     }
 
-    for (int i = 0; passwd_service_fileds[i] != NULL; i++) {
-        g_free (passwd_service_fileds[i]);
-    }
-    g_free (passwd_service_fileds);
+    // for (int i = 0; passwd_service_fileds[i] != NULL; i++) {
+    //     g_free (passwd_service_fileds[i]);
+    // }
+    // g_free (passwd_service_fileds);
 
     *response = resp;
     return code;

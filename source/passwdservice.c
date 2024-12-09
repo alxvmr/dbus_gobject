@@ -73,10 +73,11 @@ passwd_service_get_fields (PasswdService *self)
     gchar **fields = g_new (gchar *, 4);
     g_assert (fields != NULL);
 
-    fields[0] = g_strdup (self->user_name);
+    //fields[0] = g_strdup (self->user_name);
     fields[1] = g_strdup (self->old_passwd);
     fields[2] = g_strdup (self->new_passwd);
-    fields[3] = NULL;
+    fields[3] = g_strdup (self->new_passwd);
+    fields[4] = NULL;
 
     return fields;
 }
