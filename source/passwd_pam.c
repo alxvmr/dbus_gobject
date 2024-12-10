@@ -4,15 +4,13 @@
 #define	PASSWD_SERVICE	"passwd"
 
 static void
-__attribute__ ((__noreturn__))
-failure(pam_handle_t * pamh, int retval)
+failure(pam_handle_t * pamh, int retval, GError **error)
 {
 	if (pamh)
 	{
-		g_printerr("passwd: %s.\n", pam_strerror(pamh, retval));
+        g_set_error_literal (error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS, pam_strerror(pamh, retval));
 		pam_end(pamh, retval);
 	}
-    exit(EXIT_FAILURE);
 }
 
 int
@@ -79,7 +77,8 @@ non_interactive_conv (int                        num_msg,
 }
 
 int
-setup_pam (PasswdService *passwdservice)
+setup_pam (PasswdService *passwdservice,
+           GError        **error)
 {
     g_assert (passwdservice != NULL);
 
@@ -89,17 +88,20 @@ setup_pam (PasswdService *passwdservice)
 
     retval = pam_start (PASSWD_SERVICE, passwdservice->user_name, &conv, &pamh);
     if (retval != PAM_SUCCESS) {
-         failure (pamh, retval);
+        failure (pamh, retval, error);
+        return retval;
     }
 
     retval = pam_chauthtok (pamh, 0);
     if (retval != PAM_SUCCESS) {
-        failure (pamh, retval);
+        failure (pamh, retval, error);
+        return retval;
     }
 
     retval = pam_end (pamh, PAM_SUCCESS);
     if (retval != PAM_SUCCESS) {
-        failure (pamh, retval);
+        failure (pamh, retval, error);
+        return retval;
     }
 
     return PAM_SUCCESS;

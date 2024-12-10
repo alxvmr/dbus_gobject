@@ -3,5 +3,5 @@
 
 typedef struct _PasswdService PasswdService;
 
-int setup_pam (PasswdService *passwdservice);
+int setup_pam (PasswdService *passwdservice, GError **error);
 #endif

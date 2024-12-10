@@ -62,7 +62,11 @@ passwd_service_set_password (PasswdService  *self,
     self->old_passwd = old_passwd;
     self->new_passwd = new_passwd;
 
-    int retval = setup_pam (self);
+    int retval = setup_pam (self, error);
+
+    if (error != NULL) {
+        return FALSE;
+    }
 
     return TRUE;
 }
