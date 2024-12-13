@@ -1,5 +1,5 @@
 #include <security/pam_appl.h>
-#include "../include/passwdservice.h"
+#include "../include/passwduser.h"
 
 #define	PASSWD_SERVICE	"passwd"
 
@@ -19,12 +19,12 @@ non_interactive_conv (int                        num_msg,
                       struct pam_response      **response,
                       void                      *appdata_ptr)
 {
-    PasswdService *passwdservice = (PasswdService *) appdata_ptr;
-    g_assert (passwdservice != NULL);
+    PasswdUser *user = (PasswdUser *) appdata_ptr;
+    g_assert (user != NULL);
 
     struct pam_response *resp = NULL;
     const struct pam_message *message;
-    gchar **passwd_service_fileds = passwd_service_get_fields (passwdservice);
+    gchar **passwd_user_fileds = passwd_user_get_fields_for_pam (user);
     const gchar *answ = NULL;
     guint size_answ, code;
 
@@ -38,7 +38,7 @@ non_interactive_conv (int                        num_msg,
                 break;
             case PAM_PROMPT_ECHO_ON:
             case PAM_PROMPT_ECHO_OFF:
-                answ = passwd_service_fileds[i];
+                answ = passwd_user_fileds[i];
                 // if (message->msg_style == PAM_PROMPT_ECHO_ON) {
                 //     answ = passwdservice->user_name;
                 // }
@@ -77,16 +77,16 @@ non_interactive_conv (int                        num_msg,
 }
 
 int
-setup_pam (PasswdService *passwdservice,
-           GError        **error)
+setup_pam (PasswdUser *user,
+           GError     **error)
 {
-    g_assert (passwdservice != NULL);
+    g_assert (user != NULL);
 
     pam_handle_t *pamh = NULL;
-    struct pam_conv conv = { non_interactive_conv, passwdservice };
+    struct pam_conv conv = { non_interactive_conv, user };
     int retval;
 
-    retval = pam_start (PASSWD_SERVICE, passwdservice->user_name, &conv, &pamh);
+    retval = pam_start (PASSWD_SERVICE, user->user_name, &conv, &pamh);
     if (retval != PAM_SUCCESS) {
         failure (pamh, retval, error);
         return retval;
@@ -106,3 +106,32 @@ setup_pam (PasswdService *passwdservice,
 
     return PAM_SUCCESS;
 }
+
+// int main (int argc, char *argv[]) {
+//     GError *error = NULL;
+
+//     if (argc != 4) {
+//         g_set_error(&error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Error: Not enough arguments");
+//         g_printerr("%s\n", error->message);
+//         g_error_free(error);
+//         return 1;
+//     }
+
+//     // Создать новый экземпляр PasswdService
+
+//     // GHashTable *user_data = NULL;
+//     // gchar *user_name;
+//     // gchar *old_password;
+//     // gchar *new_password;
+
+//     // g_hash_table_new (g_str_hash, g_str_equal);
+
+//     // g_hash_table_insert (user_data, "user_name", argv[1]);
+//     // g_hash_table_insert (user_data, "old_password", argv[2]);
+//     // g_hash_table_insert (user_data, "new_password", argv[3]);
+
+
+//     // g_hash_table_destroy (user_data);
+
+//     return 0;
+// }

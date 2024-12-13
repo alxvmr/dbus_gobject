@@ -1,7 +1,6 @@
 #ifndef PASSWD_PAM_H
 #define PASSWD_PAM_H
+#include "passwduser.h"
 
-typedef struct _PasswdService PasswdService;
-
-int setup_pam (PasswdService *passwdservice, GError **error);
+int setup_pam (PasswdUser *passwduser, GError **error);
 #endif

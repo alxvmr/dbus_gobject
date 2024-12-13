@@ -1,4 +1,5 @@
 #include "../include/passwdservice.h"
+#include "../include/passwduser.h"
 
 #define SERVICE_PATH "/org/alxvmr/passwd"
 #define SERVICE_NAME "org.alxvmr.passwd"
@@ -26,12 +27,11 @@ method_call_cb (GDBusConnection       *connection,
 
         g_variant_get (parameters, "(sss)", 
                        &user_name, &old_passwd, &new_passwd);
+        PasswdUser *user = passwd_user_new (user_name, old_passwd, new_passwd);
 
         if (passwd_service_set_password (self,
+                                         user,
                                          output, 
-                                         user_name, 
-                                         old_passwd, 
-                                         new_passwd, 
                                          &error))
         {
             g_dbus_method_invocation_return_value (invocation, g_variant_new (("s"), output));

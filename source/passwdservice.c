@@ -37,9 +37,6 @@ PasswdService*
 passwd_service_new (void)
 {
     PasswdService *self = PASSWD_SERVICE (g_object_new (PASSWD_TYPE_SERVICE, NULL));
-    self->user_name = NULL;
-    self->old_passwd = NULL;
-    self->new_passwd = NULL;
     self->introspection_data = g_dbus_node_info_new_for_xml(xml, NULL);
 
     return self;
@@ -47,41 +44,18 @@ passwd_service_new (void)
 
 gboolean
 passwd_service_set_password (PasswdService  *self,
+                             PasswdUser     *user,
                              gchar          *output,
-                             gchar          *user_name,
-                             gchar          *old_passwd,
-                             gchar          *new_passwd,
                              GError         **error)
 {
     g_assert (self != NULL);
-    g_assert (user_name != NULL);
-    g_assert (old_passwd != NULL);
-    g_assert (new_passwd != NULL);
+    g_assert (user != NULL);
 
-    self->user_name = user_name;
-    self->old_passwd = old_passwd;
-    self->new_passwd = new_passwd;
-
-    int retval = setup_pam (self, error);
+    int retval = setup_pam (user, error);
 
     if (error != NULL) {
         return FALSE;
     }
 
     return TRUE;
-}
-
-gchar **
-passwd_service_get_fields (PasswdService *self)
-{
-    gchar **fields = g_new (gchar *, 4);
-    g_assert (fields != NULL);
-
-    //fields[0] = g_strdup (self->user_name);
-    fields[1] = g_strdup (self->old_passwd);
-    fields[2] = g_strdup (self->new_passwd);
-    fields[3] = g_strdup (self->new_passwd);
-    fields[4] = NULL;
-
-    return fields;
 }
