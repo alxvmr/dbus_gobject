@@ -28,6 +28,11 @@ non_interactive_conv (int                        num_msg,
     const gchar *answ = NULL;
     guint size_answ, code;
 
+    resp = malloc(sizeof(struct pam_response) * num_msg);
+    if (resp == NULL) {
+        return PAM_CONV_ERR;
+    }
+
     for (int i = 0; i < num_msg; i++) {
         message = &((*msgm)[i]);
         message = msgm[i];
@@ -39,21 +44,13 @@ non_interactive_conv (int                        num_msg,
             case PAM_PROMPT_ECHO_ON:
             case PAM_PROMPT_ECHO_OFF:
                 answ = passwd_user_fileds[i];
-                // if (message->msg_style == PAM_PROMPT_ECHO_ON) {
-                //     answ = passwdservice->user_name;
-                // }
-                // else {
-                //     answ = passwdservice->old_passwd;
-                // }
+
                 if ((answ != NULL) && (answ[0] != '\0')) {
-                    size_answ = strlen (answ);
-                    resp[i].resp = malloc(size_answ + 1);
+                    resp[i].resp = g_strdup (answ);
                     if (resp[i].resp == NULL) {
                         resp[i].resp_retcode = PAM_BUF_ERR;
                     }
                     else {
-                        memcpy(resp[i].resp, answ, size_answ);
-                        resp[i].resp[size_answ] = '\0';
                         resp[i].resp_retcode = PAM_SUCCESS;
                     }
                 }
@@ -107,31 +104,28 @@ setup_pam (PasswdUser *user,
     return PAM_SUCCESS;
 }
 
-// int main (int argc, char *argv[]) {
-//     GError *error = NULL;
+int main (int argc, char *argv[]) {
+    GError *error = NULL;
+    PasswdUser *user = NULL;
+    int res;
 
-//     if (argc != 4) {
-//         g_set_error(&error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Error: Not enough arguments");
-//         g_printerr("%s\n", error->message);
-//         g_error_free(error);
-//         return 1;
-//     }
+    if (argc != 4) {
+        g_set_error(&error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Error: Not enough arguments");
+        g_printerr("%s\n", error->message);
+        g_error_free(error);
+        return 1;
+    }
 
-//     // Создать новый экземпляр PasswdService
+    user = passwd_user_new (argv[1], argv[2], argv[3]);
+    res = setup_pam (user, &error);
 
-//     // GHashTable *user_data = NULL;
-//     // gchar *user_name;
-//     // gchar *old_password;
-//     // gchar *new_password;
+    if (res != PAM_SUCCESS) {
+        g_printerr ("%s\n", error->message);
+        g_error_free (error);
+        g_object_unref (user);
+        return 1;
+    }
 
-//     // g_hash_table_new (g_str_hash, g_str_equal);
-
-//     // g_hash_table_insert (user_data, "user_name", argv[1]);
-//     // g_hash_table_insert (user_data, "old_password", argv[2]);
-//     // g_hash_table_insert (user_data, "new_password", argv[3]);
-
-
-//     // g_hash_table_destroy (user_data);
-
-//     return 0;
-// }
+    g_object_unref (user);
+    return 0;
+}

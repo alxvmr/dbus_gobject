@@ -37,7 +37,7 @@ method_call_cb (GDBusConnection       *connection,
             g_dbus_method_invocation_return_value (invocation, g_variant_new (("s"), output));
         }
         else {
-            g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED, "Failed to change password: %s", error->message);
+            g_dbus_method_invocation_return_error(invocation, error->domain, error->code, "%s", error->message);
             g_error_free(error);
         }
         return;

@@ -51,9 +51,75 @@ passwd_service_set_password (PasswdService  *self,
     g_assert (self != NULL);
     g_assert (user != NULL);
 
-    int retval = setup_pam (user, error);
+    GSubprocess *subprocess = NULL;
+    GInputStream *input_stream = NULL;
+    GDataInputStream *input_data_stream = NULL;
+    GError *error_sub = NULL;
+    gboolean res = FALSE;
+    gchar *outline = NULL;
+    gchar *outmess_pam = NULL;
+    gsize length_input;
 
-    if (error != NULL) {
+    subprocess = g_subprocess_new (G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE,
+                                   &error_sub,
+                                   "./pam_helper",
+                                   user->user_name,
+                                   user->old_passwd,
+                                   user->new_passwd,
+                                   NULL);
+
+    if (error_sub) {
+        g_set_error_literal (error, error_sub->domain, error_sub->code, error_sub->message);
+        g_error_free (error_sub);
+        return FALSE;
+    }
+
+    input_stream = g_subprocess_get_stdout_pipe (subprocess);
+    input_data_stream = g_data_input_stream_new (input_stream);
+
+    do {
+        outline = g_data_input_stream_read_line (input_data_stream, &length_input, NULL, &error_sub);
+        if (error_sub) {
+            g_set_error_literal (error, error_sub->domain, error_sub->code, error_sub->message);
+            g_error_free (error_sub);
+            g_object_unref (subprocess);
+            g_object_unref (input_stream);
+            g_object_unref (input_data_stream);
+            return FALSE;
+        }
+        if (outline == NULL) {
+            continue;
+        }
+        g_clear_pointer (&outmess_pam, g_free);
+        outmess_pam = outline;
+    } while (outline);
+
+    g_input_stream_close (input_stream, NULL, &error_sub);
+    if (error_sub != NULL) {
+        g_set_error_literal (error, error_sub->domain, error_sub->code, error_sub->message);
+        g_error_free (error_sub);
+        g_object_unref (subprocess);
+        g_object_unref (input_stream);
+        g_object_unref (input_data_stream);
+        return FALSE;
+    }
+    
+    res = g_subprocess_wait_check (subprocess, NULL, &error_sub);
+    if (!res) {
+        GBytes *stderr_bytes = NULL;
+        GString *error_msg = NULL;
+        const gchar *stderr_data = NULL;
+        gsize stderr_size;
+        GInputStream *stderr_stream = NULL;
+
+        stderr_stream = g_subprocess_get_stderr_pipe (subprocess);
+        stderr_bytes = g_input_stream_read_bytes (stderr_stream, 4096, NULL, NULL);
+        stderr_data = g_bytes_get_data (stderr_bytes, &stderr_size);
+
+        g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED, stderr_data);
+        g_error_free (error_sub);
+        g_object_unref (subprocess);
+
         return FALSE;
     }
 
