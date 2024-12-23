@@ -46,7 +46,7 @@ non_interactive_conv (int                        num_msg,
         switch (message->msg_style) {
             case PAM_TEXT_INFO:
             case PAM_ERROR_MSG:
-                fprintf(stderr, "%s\n", message->msg);
+                g_printerr("%s\n", message->msg);
                 break;
             case PAM_PROMPT_ECHO_ON:
             case PAM_PROMPT_ECHO_OFF:
@@ -99,7 +99,7 @@ setup_pam (PasswdUser *user)
 
     retval = pam_start (PASSWD_SERVICE, user->user_name, &conv, &pamh);
     if (retval != PAM_SUCCESS) {
-        fprintf(stderr, "%s\n", pam_strerror(pamh, retval));
+        g_printerr("%s\n", pam_strerror(pamh, retval));
         pam_end(pamh, retval);
         return retval;
     }
@@ -113,7 +113,7 @@ setup_pam (PasswdUser *user)
 
     retval = pam_end (pamh, PAM_SUCCESS);
     if (retval != PAM_SUCCESS) {
-        fprintf(stderr, "%s\n", pam_strerror(pamh, retval));
+        g_printerr("%s\n", pam_strerror(pamh, retval));
         pam_end(pamh, retval);
         return retval;
     }
@@ -128,7 +128,7 @@ int main (int argc, char *argv[]) {
     int res;
 
     if (argc != 4) {
-        fprintf(stderr, "%s\n", "Not enough arguments");
+        g_printerr("%s\n", "Not enough arguments");
         return 1;
     }
 
