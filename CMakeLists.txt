@@ -18,6 +18,7 @@ pkg_check_modules(DBUS_GLIB REQUIRED dbus-glib-1)
 pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 pkg_check_modules(PAM REQUIRED pam)
+pkg_check_modules(PAM_MISC pam_misc)
 
 add_executable(passwd_service ${SOURCE_FILES_PASSWD_SERVICE})
 add_executable(pam_helper  ${SOURCE_FILES_PAM_HELPER})
