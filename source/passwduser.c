@@ -35,17 +35,3 @@ passwd_user_finalize (GObject *obj)
 
     G_OBJECT_CLASS (passwd_user_parent_class) -> finalize (obj);
 }
-
-gchar**
-passwd_user_get_fields_for_pam (PasswdUser *self)
-{
-    gchar **fields = g_new (gchar *, 4);
-    g_assert (fields != NULL);
-
-    fields[0] = g_strdup (self->old_passwd);
-    fields[1] = g_strdup (self->new_passwd);
-    fields[2] = g_strdup (self->new_passwd);
-    fields[3] = NULL;
-
-    return fields;
-}
