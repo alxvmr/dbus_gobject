@@ -1,16 +1,23 @@
 #include <security/pam_appl.h>
 #include "../include/passwduser.h"
+#include <stdio.h>
 
 #define	PASSWD_SERVICE	"passwd"
+#define PAM_OLDPASS 0
+#define PAM_NEWPASS 1
+#define PAM_SKIPASS 2
 
-static void
-failure(pam_handle_t * pamh, int retval, GError **error)
-{
-	if (pamh)
-	{
-        g_set_error_literal (error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS, pam_strerror(pamh, retval));
-		pam_end(pamh, retval);
-	}
+static inline int getstate(const char *msg) {
+    /* Interpret possible PAM messages (not including errors) */
+    if (!strcmp(msg, "Current Password: "))
+        return PAM_OLDPASS;
+
+    if (!strcmp(msg, "New Password: "))
+        return PAM_NEWPASS;
+    if (!strcmp(msg, "Reenter new Password: "))
+        return PAM_NEWPASS;
+
+    return PAM_SKIPASS;
 }
 
 int
@@ -24,9 +31,8 @@ non_interactive_conv (int                        num_msg,
 
     struct pam_response *resp = NULL;
     const struct pam_message *message;
-    gchar **passwd_user_fileds = passwd_user_get_fields_for_pam (user);
     const gchar *answ = NULL;
-    guint size_answ, code;
+    guint size_answ;
 
     resp = malloc(sizeof(struct pam_response) * num_msg);
     if (resp == NULL) {
@@ -34,19 +40,33 @@ non_interactive_conv (int                        num_msg,
     }
 
     for (int i = 0; i < num_msg; i++) {
-        message = &((*msgm)[i]);
+        answ = NULL;
         message = msgm[i];
 
         switch (message->msg_style) {
             case PAM_TEXT_INFO:
             case PAM_ERROR_MSG:
+                fprintf(stderr, "%s\n", message->msg);
                 break;
             case PAM_PROMPT_ECHO_ON:
             case PAM_PROMPT_ECHO_OFF:
-                answ = passwd_user_fileds[i];
-
+                switch (getstate(message->msg)) {
+                    case PAM_OLDPASS:
+                        answ = g_strdup (user->old_passwd);
+                        break;
+                    case PAM_NEWPASS:
+                        answ = g_strdup (user->new_passwd);
+                        break;
+                    case PAM_SKIPASS:
+                        answ = NULL;
+                        break;
+                    default:
+                        // TODO: добавить лог о неизвестном сообщении
+                        break;
+                }
                 if ((answ != NULL) && (answ[0] != '\0')) {
                     resp[i].resp = g_strdup (answ);
+
                     if (resp[i].resp == NULL) {
                         resp[i].resp_retcode = PAM_BUF_ERR;
                     }
@@ -56,7 +76,7 @@ non_interactive_conv (int                        num_msg,
                 }
                 else {
                     resp[i].resp_retcode = PAM_CONV_ERR;
-                    code = PAM_CONV_ERR;
+                    return PAM_CONV_ERR;
                 }
                 break;
             default:
@@ -64,18 +84,12 @@ non_interactive_conv (int                        num_msg,
         }
     }
 
-    // for (int i = 0; passwd_service_fileds[i] != NULL; i++) {
-    //     g_free (passwd_service_fileds[i]);
-    // }
-    // g_free (passwd_service_fileds);
-
     *response = resp;
-    return code;
+    return PAM_SUCCESS;
 }
 
 int
-setup_pam (PasswdUser *user,
-           GError     **error)
+setup_pam (PasswdUser *user)
 {
     g_assert (user != NULL);
 
@@ -85,46 +99,41 @@ setup_pam (PasswdUser *user,
 
     retval = pam_start (PASSWD_SERVICE, user->user_name, &conv, &pamh);
     if (retval != PAM_SUCCESS) {
-        failure (pamh, retval, error);
+        fprintf(stderr, "%s\n", pam_strerror(pamh, retval));
+        pam_end(pamh, retval);
         return retval;
     }
 
     retval = pam_chauthtok (pamh, 0);
     if (retval != PAM_SUCCESS) {
-        failure (pamh, retval, error);
+        //fprintf(stderr, "%s\n", pam_strerror(pamh, retval));
+        pam_end(pamh, retval);
         return retval;
     }
 
     retval = pam_end (pamh, PAM_SUCCESS);
     if (retval != PAM_SUCCESS) {
-        failure (pamh, retval, error);
+        fprintf(stderr, "%s\n", pam_strerror(pamh, retval));
+        pam_end(pamh, retval);
         return retval;
     }
+
+    pam_end(pamh, retval);
 
     return PAM_SUCCESS;
 }
 
 int main (int argc, char *argv[]) {
-    GError *error = NULL;
     PasswdUser *user = NULL;
     int res;
 
     if (argc != 4) {
-        g_set_error(&error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT, "Error: Not enough arguments");
-        g_printerr("%s\n", error->message);
-        g_error_free(error);
+        fprintf(stderr, "%s\n", "Not enough arguments");
         return 1;
     }
 
     user = passwd_user_new (argv[1], argv[2], argv[3]);
-    res = setup_pam (user, &error);
-
-    if (res != PAM_SUCCESS) {
-        g_printerr ("%s\n", error->message);
-        g_error_free (error);
-        g_object_unref (user);
-        return 1;
-    }
+    res = setup_pam (user);
 
     g_object_unref (user);
     return 0;
