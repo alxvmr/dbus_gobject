@@ -1,11 +1,14 @@
 #include <security/pam_appl.h>
 #include "../include/passwduser.h"
 #include <stdio.h>
+#include <json-glib/json-glib.h>
 
 #define	PASSWD_SERVICE	"passwd"
 #define PAM_OLDPASS 0
 #define PAM_NEWPASS 1
 #define PAM_SKIPASS 2
+
+gchar *CONV_ERROR = NULL;
 
 static inline int getstate(const char *msg) {
     /* Interpret possible PAM messages (not including errors) */
@@ -46,7 +49,9 @@ non_interactive_conv (int                        num_msg,
         switch (message->msg_style) {
             case PAM_TEXT_INFO:
             case PAM_ERROR_MSG:
-                g_printerr("%s\n", message->msg);
+                g_free (CONV_ERROR);
+                CONV_ERROR = g_strdup (message->msg);
+                g_printerr ("%s\n", message->msg);
                 break;
             case PAM_PROMPT_ECHO_ON:
             case PAM_PROMPT_ECHO_OFF:
@@ -89,7 +94,7 @@ non_interactive_conv (int                        num_msg,
 }
 
 int
-setup_pam (PasswdUser *user)
+setup_pam (PasswdUser *user, JsonObject *object)
 {
     g_assert (user != NULL);
 
@@ -99,6 +104,7 @@ setup_pam (PasswdUser *user)
 
     retval = pam_start (PASSWD_SERVICE, user->user_name, &conv, &pamh);
     if (retval != PAM_SUCCESS) {
+        json_object_set_string_member(object, "pam_start_error", pam_strerror(pamh, retval));
         g_printerr("%s\n", pam_strerror(pamh, retval));
         pam_end(pamh, retval);
         return retval;
@@ -106,19 +112,21 @@ setup_pam (PasswdUser *user)
 
     retval = pam_chauthtok (pamh, 0);
     if (retval != PAM_SUCCESS) {
-        //fprintf(stderr, "%s\n", pam_strerror(pamh, retval));
+        json_object_set_string_member(object, "pam_chauthtok_error", pam_strerror(pamh, retval));
+        if (CONV_ERROR != NULL) {
+            json_object_set_string_member(object, "pam_conv_error", CONV_ERROR);
+        }
         pam_end(pamh, retval);
         return retval;
     }
 
     retval = pam_end (pamh, PAM_SUCCESS);
     if (retval != PAM_SUCCESS) {
+        json_object_set_string_member(object, "pam_end_error", pam_strerror(pamh, retval));
         g_printerr("%s\n", pam_strerror(pamh, retval));
         pam_end(pamh, retval);
         return retval;
     }
-
-    pam_end(pamh, retval);
 
     return PAM_SUCCESS;
 }
@@ -126,14 +134,43 @@ setup_pam (PasswdUser *user)
 int main (int argc, char *argv[]) {
     PasswdUser *user = NULL;
     int res;
+    
+    JsonNode *root = json_node_new(JSON_NODE_OBJECT);
+    JsonObject *object = json_object_new();
+    json_object_set_member(object, "user_name", json_node_new(JSON_NODE_NULL));
+    json_object_set_member(object, "main_error", json_node_new(JSON_NODE_NULL));
+    json_object_set_member(object, "pam_start_error", json_node_new(JSON_NODE_NULL));
+    json_object_set_member(object, "pam_chauthtok_error", json_node_new(JSON_NODE_NULL));
+    json_object_set_member(object, "pam_conv_error", json_node_new(JSON_NODE_NULL));
+    json_object_set_member(object, "pam_end_error", json_node_new(JSON_NODE_NULL));
 
     if (argc != 4) {
+        json_object_set_string_member(object, "main_error", "Not enough arguments");
         g_printerr("%s\n", "Not enough arguments");
         return 1;
     }
 
     user = passwd_user_new (argv[1], argv[2], argv[3]);
-    res = setup_pam (user);
+    json_object_set_string_member(object, "user_name", user->user_name);
+
+    // TODO: добавлять пароли в json?
+
+    res = setup_pam (user, object);
+
+    json_node_init(root, JSON_NODE_OBJECT);
+    json_node_set_object(root, object);
+
+    JsonGenerator *generator = json_generator_new();
+    json_generator_set_root (generator, root);
+    gchar *json_string = json_generator_to_data (generator, NULL);
+
+    g_print ("%s\n", json_string);
+
+    g_free (json_string);
+    g_object_unref (generator);
+    json_node_free (root);
+    json_object_unref (object);
+    g_free(CONV_ERROR);
 
     g_object_unref (user);
     return 0;
