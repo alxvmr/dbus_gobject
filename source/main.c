@@ -29,17 +29,14 @@ method_call_cb (GDBusConnection       *connection,
                        &user_name, &old_passwd, &new_passwd);
         PasswdUser *user = passwd_user_new (user_name, old_passwd, new_passwd);
 
-        if (passwd_service_set_password (self,
-                                         user,
-                                         output, 
-                                         &error))
+        if (!passwd_service_set_password (self,
+                                          user,
+                                          &error))
         {
-            g_dbus_method_invocation_return_value (invocation, g_variant_new (("s"), output));
-        }
-        else {
             g_dbus_method_invocation_return_error(invocation, error->domain, error->code, "%s", error->message);
             g_error_free(error);
         }
+
         return;
     }
 }

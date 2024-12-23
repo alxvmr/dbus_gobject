@@ -26,7 +26,6 @@ GDBusNodeInfo *passwd_service_get_introspection_data (PasswdService *self);
 
 gboolean passwd_service_set_password (PasswdService   *self,
                                       PasswdUser      *user,
-                                      gchar           *output,
                                       GError          **error);
 G_END_DECLS
 
