@@ -46,14 +46,7 @@ const gchar* get_translate_by_pam_retval (pam_handle_t *pamh, int retval) {
     size_t table_size = sizeof(retval_table) / sizeof(retval_table[0]);
     for (size_t i = 0; i < table_size; i++) {
         if (retval_table[i].code == retval) {
-            GError *error = NULL;
-            res = g_convert (retval_table[i].message, -1, "UTF-8", "CP1251", NULL, NULL, &error);
-            if (error != NULL) {
-                g_warning ("Translation unavailable: %s\n", error->message);
-                g_error_free (error);
-                break;
-            }
-            return res;
+            return retval_table[i].message;
         }
     }
 

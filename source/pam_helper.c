@@ -178,7 +178,18 @@ clear_json_object (JsonObject *object)
     json_object_unref (object);
 }
 
+/*
+  Allows you to avoid character conversion 
+  when outputting Cyrillic characters
+*/
+void g_print_no_convert(const gchar *buf)
+{
+    fputs(buf, stdout);
+}
+
 int main (int argc, char *argv[]) {
+    g_set_print_handler(g_print_no_convert);
+
     PasswdUser *user = NULL;
     int res;
     
