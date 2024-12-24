@@ -51,7 +51,7 @@ non_interactive_conv (int                        num_msg,
             case PAM_ERROR_MSG:
                 g_free (CONV_ERROR);
                 CONV_ERROR = g_strdup (message->msg);
-                g_printerr ("%s\n", message->msg);
+                // g_printerr ("%s\n", message->msg);
                 break;
             case PAM_PROMPT_ECHO_ON:
             case PAM_PROMPT_ECHO_OFF:
@@ -131,18 +131,60 @@ setup_pam (PasswdUser *user, JsonObject *object)
     return PAM_SUCCESS;
 }
 
-int main (int argc, char *argv[]) {
-    PasswdUser *user = NULL;
-    int res;
-    
-    JsonNode *root = json_node_new(JSON_NODE_OBJECT);
-    JsonObject *object = json_object_new();
+JsonNode *
+init_json_node ()
+{
+    JsonNode *root = json_node_new (JSON_NODE_OBJECT);
+    JsonObject *object = json_object_new ();
+
     json_object_set_member(object, "user_name", json_node_new(JSON_NODE_NULL));
     json_object_set_member(object, "main_error", json_node_new(JSON_NODE_NULL));
     json_object_set_member(object, "pam_start_error", json_node_new(JSON_NODE_NULL));
     json_object_set_member(object, "pam_chauthtok_error", json_node_new(JSON_NODE_NULL));
     json_object_set_member(object, "pam_conv_error", json_node_new(JSON_NODE_NULL));
     json_object_set_member(object, "pam_end_error", json_node_new(JSON_NODE_NULL));
+    // TODO: добавлять пароли в json?
+
+    json_node_init (root, JSON_NODE_OBJECT);
+    json_node_set_object (root, object);
+
+    return root;
+}
+
+gchar *
+get_string_from_json_node (JsonNode *root)
+{
+    JsonGenerator *generator = json_generator_new();
+    json_generator_set_root (generator, root);
+    gchar *json_string = json_generator_to_data (generator, NULL);
+
+    g_object_unref (generator);
+
+    return json_string;
+}
+
+void
+clear_json_object (JsonObject *object)
+{
+    GList *members = json_object_get_members (object);
+
+    for (GList *l = members; l != NULL; l = l->next) {
+        const gchar *key = (const gchar *) l->data;
+        json_object_remove_member (object, key);
+    }
+
+    g_list_free (members);
+    json_object_unref (object);
+}
+
+int main (int argc, char *argv[]) {
+    PasswdUser *user = NULL;
+    int res;
+    
+    JsonNode *root = init_json_node ();
+    JsonObject *object = json_node_get_object(root);
+
+    g_assert (object != NULL);
 
     if (argc != 4) {
         json_object_set_string_member(object, "main_error", "Not enough arguments");
@@ -153,23 +195,15 @@ int main (int argc, char *argv[]) {
     user = passwd_user_new (argv[1], argv[2], argv[3]);
     json_object_set_string_member(object, "user_name", user->user_name);
 
-    // TODO: добавлять пароли в json?
-
     res = setup_pam (user, object);
 
-    json_node_init(root, JSON_NODE_OBJECT);
-    json_node_set_object(root, object);
-
-    JsonGenerator *generator = json_generator_new();
-    json_generator_set_root (generator, root);
-    gchar *json_string = json_generator_to_data (generator, NULL);
-
+    gchar *json_string = get_string_from_json_node (root);
     g_print ("%s\n", json_string);
 
     g_free (json_string);
-    g_object_unref (generator);
+    clear_json_object (object);
     json_node_free (root);
-    json_object_unref (object);
+
     g_free(CONV_ERROR);
 
     g_object_unref (user);
