@@ -1,5 +1,6 @@
 #include <security/pam_appl.h>
 #include "../include/passwduser.h"
+#include "../include/translate.h"
 #include <stdio.h>
 #include <json-glib/json-glib.h>
 
@@ -104,7 +105,7 @@ setup_pam (PasswdUser *user, JsonObject *object)
 
     retval = pam_start (PASSWD_SERVICE, user->user_name, &conv, &pamh);
     if (retval != PAM_SUCCESS) {
-        json_object_set_string_member(object, "pam_start_error", pam_strerror(pamh, retval));
+        json_object_set_string_member(object, "pam_start_error", get_translate_by_pam_retval(pamh, retval));
         g_printerr("%s\n", pam_strerror(pamh, retval));
         pam_end(pamh, retval);
         return retval;
@@ -112,7 +113,7 @@ setup_pam (PasswdUser *user, JsonObject *object)
 
     retval = pam_chauthtok (pamh, 0);
     if (retval != PAM_SUCCESS) {
-        json_object_set_string_member(object, "pam_chauthtok_error", pam_strerror(pamh, retval));
+        json_object_set_string_member(object, "pam_chauthtok_error", get_translate_by_pam_retval(pamh, retval));
         if (CONV_ERROR != NULL) {
             json_object_set_string_member(object, "pam_conv_error", CONV_ERROR);
         }
@@ -122,7 +123,7 @@ setup_pam (PasswdUser *user, JsonObject *object)
 
     retval = pam_end (pamh, PAM_SUCCESS);
     if (retval != PAM_SUCCESS) {
-        json_object_set_string_member(object, "pam_end_error", pam_strerror(pamh, retval));
+        json_object_set_string_member(object, "pam_end_error", get_translate_by_pam_retval(pamh, retval));
         g_printerr("%s\n", pam_strerror(pamh, retval));
         pam_end(pamh, retval);
         return retval;
@@ -188,7 +189,15 @@ int main (int argc, char *argv[]) {
 
     if (argc != 4) {
         json_object_set_string_member(object, "main_error", "Not enough arguments");
-        g_printerr("%s\n", "Not enough arguments");
+        gchar *json_string = get_string_from_json_node (root);
+        g_print ("%s\n", json_string);
+
+        //g_printerr("%s\n", "Not enough arguments");
+
+        g_free (json_string);
+        clear_json_object (object);
+        json_node_free (root);
+
         return 1;
     }
 

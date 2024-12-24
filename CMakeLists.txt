@@ -9,6 +9,7 @@ set(SOURCE_FILES_PASSWD_SERVICE
 
 set(SOURCE_FILES_PAM_HELPER
     ${CMAKE_CURRENT_SOURCE_DIR}/source/pam_helper.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/translate.c
     ${CMAKE_CURRENT_SOURCE_DIR}/source/passwduser.c
 )
 
