@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "../include/passwdservice.h"
-#include "../include/passwd_pam.h"
+#include "../include/pam_helper.h"
 
 G_DEFINE_TYPE (PasswdService, passwd_service, G_TYPE_OBJECT)
 

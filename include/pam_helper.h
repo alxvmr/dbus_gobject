@@ -1,5 +1,5 @@
-#ifndef PASSWD_PAM_H
-#define PASSWD_PAM_H
+#ifndef PAM_HELPER_H
+#define PAM_HELPER_H
 #include "passwduser.h"
 
 int setup_pam (PasswdUser *passwduser, GError **error);
