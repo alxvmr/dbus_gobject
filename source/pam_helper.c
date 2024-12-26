@@ -101,21 +101,24 @@ wrapped_pam_end (pam_handle_t *pamh, int retval, JsonObject *object)
 }
 
 int
-setup_pam (PasswdUser *user, JsonObject *object)
+setup_pam (PasswdUser *user, JsonNode *root)
 {
     g_assert (user != NULL);
 
     pam_handle_t *pamh = NULL;
     struct pam_conv conv = { non_interactive_conv, user };
     int retval;
+    JsonObject *object = json_node_get_object (root);
 
     retval = pam_start (PASSWD_SERVICE, user->user_name, &conv, &pamh);
     set_member_pam (object, "pam_start", retval, pamh);
 
     if (retval != PAM_SUCCESS) {
         wrapped_pam_end (pamh, retval, object);
+        print_json (root);
         return retval;
     }
+    print_json (root);
 
     retval = pam_chauthtok (pamh, 0);
     set_member_pam (object, "pam_chauthtok", retval, pamh);
@@ -125,15 +128,20 @@ setup_pam (PasswdUser *user, JsonObject *object)
             json_object_set_string_member(object, "pam_conv", CONV_ERROR);
         }
         wrapped_pam_end (pamh, retval, object);
+        print_json (root);
         return retval;
     }
+    print_json (root);
 
     wrapped_pam_end (pamh, PAM_SUCCESS, object);
 
     if (retval != PAM_SUCCESS) {
         wrapped_pam_end (pamh, retval, object);
+        print_json (root);
         return retval;
     }
+
+    print_json (root);
 
     return PAM_SUCCESS;
 }
@@ -160,12 +168,10 @@ int main (int argc, char *argv[]) {
 
     if (argc != 4) {
         json_object_set_string_member(object, "main_error", "Not enough arguments");
-        gchar *json_string = get_string_from_json_node (root);
-        g_print ("%s\n", json_string);
+        print_json (root);
 
         //g_printerr("%s\n", "Not enough arguments");
 
-        g_free (json_string);
         clear_json_object (object);
         json_node_free (root);
 
@@ -175,12 +181,8 @@ int main (int argc, char *argv[]) {
     user = passwd_user_new (argv[1], argv[2], argv[3]);
     json_object_set_string_member(object, "user_name", user->user_name);
 
-    res = setup_pam (user, object);
+    res = setup_pam (user, root);
 
-    gchar *json_string = get_string_from_json_node (root);
-    g_print ("%s\n", json_string);
-
-    g_free (json_string);
     clear_json_object (object);
     json_node_free (root);
 

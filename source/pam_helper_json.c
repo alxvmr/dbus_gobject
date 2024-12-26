@@ -64,6 +64,15 @@ get_string_from_json_node (JsonNode *root)
 }
 
 void
+print_json (JsonNode *root)
+{
+    gchar *output = get_string_from_json_node (root);
+    g_print ("%s\n", output);
+
+    g_free (output);
+}
+
+void
 clear_json_object (JsonObject *object)
 {
     GList *members = json_object_get_members (object);
