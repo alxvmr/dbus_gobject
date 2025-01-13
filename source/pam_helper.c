@@ -2,6 +2,7 @@
 #include "../include/passwduser.h"
 #include "../include/pam_helper_json.h"
 #include <stdio.h>
+#include <pwd.h>
 
 #define	PASSWD_SERVICE	"passwd"
 #define PAM_OLDPASS 0
@@ -146,6 +147,21 @@ setup_pam (PasswdUser *user, JsonNode *root)
     return PAM_SUCCESS;
 }
 
+gchar* get_username ()
+{
+    uid_t uid = getuid();
+
+    struct passwd pwd;
+    struct passwd *pwd_res = NULL;
+    char buf[4096];
+
+    int ret = getpwuid_r (uid, &pwd, buf, sizeof(buf), &pwd_res);
+    if (ret) {
+        return NULL;
+    }
+    return g_strdup (pwd.pw_name);
+}
+
 /*
   Allows you to avoid character conversion 
   when outputting Cyrillic characters
@@ -166,11 +182,9 @@ int main (int argc, char *argv[]) {
 
     g_assert (object != NULL);
 
-    if (argc != 4) {
+    if (argc != 3) {
         json_object_set_string_member(object, "main_error", "Not enough arguments");
         print_json (root);
-
-        //g_printerr("%s\n", "Not enough arguments");
 
         clear_json_object (object);
         json_node_free (root);
@@ -178,7 +192,18 @@ int main (int argc, char *argv[]) {
         return 1;
     }
 
-    user = passwd_user_new (argv[1], argv[2], argv[3]);
+    gchar *username = get_username ();
+    if (!username) {
+        json_object_set_string_member(object, "main_error", "Unable to retrieve username");
+        print_json (root);
+
+        clear_json_object (object);
+        json_node_free (root);
+
+        return 1;
+    }
+
+    user = passwd_user_new (username, argv[1], argv[2]);
     json_object_set_string_member(object, "user_name", user->user_name);
 
     res = setup_pam (user, root);
